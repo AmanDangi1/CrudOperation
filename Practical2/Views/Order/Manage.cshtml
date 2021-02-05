@@ -1,0 +1,376 @@
+﻿@model Practical2.ViewModel.CreateOrUpdateOrder
+@{
+    ViewBag.Title = "Manage";
+}
+
+<h2>Manage</h2>
+@{
+    var customerdropdown = Model.Customers.Select(s => new System.Web.Mvc.SelectListItem()
+    {
+        Text = s.Name,
+        Value = s.Id.ToString()
+    });
+    var productdropdown = Model.OrderDetailsFormModel.Items.Select(s => new System.Web.Mvc.SelectListItem()
+    {
+        Text = s.Name,
+        Value = s.Id.ToString()
+    });
+
+
+
+}
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    @*<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">*@
+    <script src="//code.jquery.com/jquery-1.10.2.js"></script>
+    <script src="~/Scripts/jquery.validate.min.js"></script>
+    <script src="~/Scripts/jquery.validate.unobtrusive.min.js"></script>
+    
+</head>
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+    
+<div class="form-horizontal" >
+    <hr />
+    <div class="form-group input-group-append col-md 6">
+        @Html.LabelFor(m => m.OrderNo)
+        <br />
+
+        @Html.TextBoxFor(m => m.OrderNo, new { @id = "OrderNo", @class = "form-control", @placeholder = "OrderNo", @readonly = "readonly" })
+    </div>
+    <div class="form-group input-group-append col-md 6">
+        @Html.LabelFor(m => m.CustomerId)
+        @Html.DropDownListFor(m => m.CustomerId, customerdropdown, "---Select Customer---", new
+   {
+       @class =
+    "form-control"
+       ,onkeyup = "validate()"
+   })
+    </div>
+    <div class="form-group input-group-append col-md 6">
+        @Html.LabelFor(m => m.OrderDate)
+        <br />
+        @Html.TextBoxFor(m => m.OrderDate, "{0:yyyy-MM-dd}", new { type = "date" })
+    </div>
+
+    <hr />
+
+
+    <div class="form-horizontal">
+        <div class="form-group has-success">
+
+            @Html.LabelFor(m => m.OrderDetailsFormModel.ItemId)
+            @Html.DropDownListFor(m => m.OrderDetailsFormModel.ItemId, productdropdown, "---Select Product---", new
+       {
+           @class =
+        "form-control"
+           ,onkeyup = "validate()"
+       })
+        </div>
+        <div class="form-group has-success">
+
+            @Html.LabelFor(m => m.OrderDetailsFormModel.Quantity)
+            <br />
+
+            @Html.TextBoxFor(m => m.OrderDetailsFormModel.Quantity, new { @class = "form-control", @placeholder = "Quantity" })
+
+        </div>
+        <div class="form-group has-success">
+
+            @Html.LabelFor(m => m.OrderDetailsFormModel.Amount)
+            <br />
+
+            @Html.TextBoxFor(m => m.OrderDetailsFormModel.Amount, new { @class = "form-control", @placeholder = "Amount", @readonly = "readonly" })
+
+        </div>
+    </div>
+    <button type="button" class="btn btn-md ripple btn-primary btn-icon margin-right-5" title="Add"
+            onclick="return AddOrderDetail()">
+        Add
+    </button>
+    <button type="button" class="btn btn-md ripple btn-primary btn-icon margin-right-5" title="Update"
+            onclick="return UpdateOrderdetails()">
+        Update
+    </button>
+    @Html.HiddenFor(o => o.OrderDetails_update)
+    <div id="table"></div>
+    <br />
+    @Html.HiddenFor(o => o.OrderDetailsFormModel.Ind, new { @class = "form-control" })
+    @Html.HiddenFor(o => o.OrderDetails_update)
+    @Html.HiddenFor(o => o.mid)
+
+
+    <div class="form-group">
+        <div class="col-md-10">
+            <input type="submit" class="btn btn-success" id="btnSubmit" value="Submit" />
+
+            <button class="btn btn-default">
+                <a href="@Url.Action("OrderList","Order")">Back to List</a>
+
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+<div>
+    @Html.ActionLink("Back to List", "Index")
+</div>
+
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryval")
+}
+
+
+<script name="text\javascript">
+
+    $(function () {
+        var updatestring = $('#OrderDetails_update').val();
+        if (updatestring != "")
+        {
+            var data = JSON.parse(updatestring);
+
+            if (data != null) {
+                if (data.length > 0) {
+                    for (var i = 0; i < data.length; i++)
+                    {
+                        var orderDetail = new OrderDetails("", data[i].ItemName, data[i].ItemId, data[i].Quantity, data[i].Amount);
+                        OrderDetailsItems.push(orderDetail);
+                    }
+                }
+
+            }
+            RenderTable();
+
+
+        }
+    });
+
+
+      $("#@Html.IdFor(m => m.OrderDetailsFormModel.ItemId)").on('change', function () {
+        var Itemid = parseInt($(this).val());
+
+        if (isNaN(Itemid))
+            ProductId = 0;
+        GetAmountPriceById(Itemid);
+      });
+
+    function GetAmountPriceById(itemid) {
+
+        $.ajax({
+            type: "POST",
+            url: "/Order/PrepareProductData/",
+            data: {
+                Itemid: itemid
+            },
+
+            cache: !1,
+            success: function (data) {
+                $('#@Html.IdFor(m=>m.OrderDetailsFormModel.Amount)').val(data.Amount);
+            },
+            error: function (data) {
+
+                console.log(data);
+            }
+        });
+    }
+    </script>
+<script name="text\javascript">
+    var OrderDetailsItems = [];
+
+    var currentUpdateIndex = null;
+
+    function OrderDetails(index, itemName, itemId, qty, amount) {
+        this.itemName = itemName;
+        this.item = itemId;
+        this.qty = qty;
+        this.amount = amount;
+        this.index = index;
+        this.total = this.qty * this.amount;
+    }
+
+    function AddOrderDetail() {
+        var res = validation();
+        if (res == false) {
+
+            return false;
+        }
+
+        var $item = $("#@Html.IdFor(m=>m.OrderDetailsFormModel.ItemId)").val(),
+            $itemName = $('#@Html.IdFor(m => m.OrderDetailsFormModel.ItemId) :selected').text(),
+            $qty = $("#@Html.IdFor(m=>m.OrderDetailsFormModel.Quantity)").val(),
+            $index = parseInt($("#@Html.IdFor(m => m.OrderDetailsFormModel.Ind)").val()),
+            $amount = $("#@Html.IdFor(m=>m.OrderDetailsFormModel.Amount)").val();
+
+        var orderDetail = new OrderDetails($index, $itemName, $item, parseInt($qty), parseInt($amount))
+        OrderDetailsItems.push(orderDetail);
+        RenderTable();
+    }
+
+
+    function editOrderDetail(index) {
+        $('#@Html.IdFor(m => m.OrderDetailsFormModel.ItemId) :selected').text(OrderDetailsItems[index].itemName);
+            currentUpdateIndex = index;
+        $("#@Html.IdFor(m => m.OrderDetailsFormModel.Quantity)").val(OrderDetailsItems[index].qty);
+        $("#@Html.IdFor(m => m.OrderDetailsFormModel.Amount)").val(OrderDetailsItems[index].amount);
+        RenderTable();
+    }
+    function UpdateOrderdetails(OrderDetail) {
+        var $item = $("#@Html.IdFor(m => m.OrderDetailsFormModel.ItemId)").val(),
+            $itemname = $('#@Html.IdFor(m => m.OrderDetailsFormModel.ItemId) :selected').text(),
+            $qty = $("#@Html.IdFor(m => m.OrderDetailsFormModel.Quantity)").val(),
+            $amount = $("#@Html.IdFor(m => m.OrderDetailsFormModel.Amount)").val()
+
+
+        if (currentUpdateIndex != null) {
+            var orderDetail = new OrderDetails(currentUpdateIndex, $itemname, $item, parseInt($qty), parseFloat($amount));
+            OrderDetailsItems[currentUpdateIndex] = orderDetail;
+            currentUpdateIndex = null;
+        }
+        RenderTable();
+        fnClearData();
+    }
+    function fnClearData() {
+        $("#@Html.IdFor(m => m.OrderDetailsFormModel.ItemId)").val('');
+        $("#@Html.IdFor(m => m.OrderDetailsFormModel.Quantity)").val(parseFloat(0).toFixed($('#D_L').val()));
+        $("#@Html.IdFor(m => m.OrderDetailsFormModel.Amount)").val(parseFloat(0).toFixed($('#D_L').val()));
+    }
+    function RenderTable()
+    {
+        var updatestring = $('OrderDetails_update').val();
+        console.log(updatestring);
+
+        var $table = $("#table");
+        $table.html('');
+        if (OrderDetailsItems.length == 0) {
+            $table.html('Add Order Details');
+        }
+        else
+        {
+            var html = '';
+            html += "<table id='ordertable'>";
+            html += AddHeaderToTable();
+
+            for (var index = 0; index < OrderDetailsItems.length; index++) {
+                html += AddOrderDetailsRow(OrderDetailsItems[index], index);
+            }
+
+            html += "</table>";
+            $table.html(html);
+        }
+    }
+
+    function AddHeaderToTable() {
+
+        var html = '';
+        html += "<tr id='t-heading'>";
+        html += "<th>Sr#</th>";
+        html += "<th>Product</th>";
+        html += "<th>Qty</th>";
+        html += "<th>Amount</th>";
+        html += "<th>Total</th>";
+        html += "<th>Actions</th>";
+        html += "</tr>";
+        return html;
+    }
+
+    function AddOrderDetailsRow(orderDetail, index) {
+
+        var html = '';
+        html += "<tr id='" + "t-row-" + index + "'>";
+        html += "<td class='t-srno'>" + (index + 1) + "</td>";
+        html += "<td class='t-itemname'>" + orderDetail.itemName + "<input type='hidden' name='orderdetails[" + index + "].ItemId' value='" + orderDetail.item + "' /></td>";
+        html += "<td class='t-qty'>" + orderDetail.qty + "<input type='hidden' name='orderdetails[" + index + "].Quantity' value='" + orderDetail.qty + "' /></td>";
+        html += "<td class='t-amount'>" + orderDetail.amount + "<input type='hidden' name='orderdetails[" + index + "].Amount' value='" + orderDetail.amount + "' /></td>";
+        html += "<td class='t-total'>" + orderDetail.total + "<input type='hidden' name='orderdetails[" + index + "].TotalAmount' value='" + orderDetail.total + "' /> </td>";
+        html += "<td><input type='button' value='Edit'  onclick='return editOrderDetail(" + index + ")'  /> <input type='button' value='Delete' onclick='return deleteOrderDetail(" + index + ")' /></td>";
+        html += "</tr>";
+        return html;
+
+    }
+
+    function deleteOrderDetail(index) {
+        OrderDetailsItems.splice(index, 1);
+        RenderTable();
+    }
+    function validation()
+    {
+        var isValid = true;
+
+
+
+        if ($("#@Html.IdFor(m => m.OrderDetailsFormModel.Quantity)").val() == '0') {
+
+            $("#@Html.IdFor(m => m.OrderDetailsFormModel.Quantity)").css('border-color', 'Red');
+            $("#quantity").show();
+            isValid = false;
+        }
+        else
+        {
+            $("#@Html.IdFor(m => m.OrderDetailsFormModel.Quantity)").css('border-color', 'Grey');
+            $("#quantity").hide();
+
+        }
+
+        if ($("#@Html.IdFor(m => m.OrderDetailsFormModel.ItemId)").val() == '') {
+
+            $("#@Html.IdFor(m => m.OrderDetailsFormModel.ItemId)").css('border-color', 'Red');
+            $("#product").show();
+            isValid = false;
+        }
+        else
+        {
+            $("#@Html.IdFor(m => m.OrderDetailsFormModel.ItemId)").css('border-color', 'Grey');
+            $("#product").hide();
+        }
+        return isValid;
+    }
+ function validate()
+    {
+        var isValid = true;
+
+        if ($("#@Html.IdFor(m => m.CustomerId)").val() == '') {
+            $("#@Html.IdFor(m => m.CustomerId)").css('border-color', 'Red');
+            $("#customer").show();
+             isValid = false;
+        }
+        else
+        {
+            $("#@Html.IdFor(m => m.CustomerId)").css('border-color', 'Gray');
+            $("#customer").hide();
+        }
+
+        return isValid;
+    }
+    $("#btnSubmit").click(function (e) {
+        e.preventDefault();
+        var res = validate();
+        if (res == false) {
+            return false;
+        }
+        var check = validation();
+        if (check == false) {
+            return false;
+        }
+        var $button = $(this);
+        debugger;
+        var form = $button.closest("form");
+
+
+        $.ajax({
+            type: "POST",
+            url: "/Order/Manage",
+            data: form.serialize(),
+            success: function (data) {
+                alert(data);
+            },
+            dataType: "json",
+            traditional: true
+        });
+
+    });
+
+</script>
