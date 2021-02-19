@@ -1,13 +1,22 @@
 {
   "version": "1.0",
   "defaultProvider": "cdnjs",
-  "libraries": [{
-  "library": "validate.js@0.13.1",
-  "destination": "lib/validate.js/"
-}
-,
+  "libraries": [
+    {
+      "library": "validate.js@0.13.1",
+      "destination": "lib/validate.js/"
+    },
+    {
+      "library": "jquery-validation-unobtrusive@3.2.11",
+      "destination": "lib/jquery-validation-unobtrusive/"
+    },
+    {
+      "library": "jquery-validate@1.19.2",
+      "destination": "lib/jquery-validate/"
+    }
+  ,
 {
-  "library": "jquery-validation-unobtrusive@3.2.11",
+  "library": "jquery-validation-unobtrusive@3.2.12",
   "destination": "lib/jquery-validation-unobtrusive/"
 }
 ]

@@ -47,13 +47,18 @@
    {
        @class =
     "form-control"
-       ,onkeyup = "validate()"
+       ,
+            onkeyup = "validate()"
    })
+        @Html.ValidationMessageFor(m => m.CustomerId, "", new { @class = "text-danger" })
+
     </div>
     <div class="form-group input-group-append col-md 6">
         @Html.LabelFor(m => m.OrderDate)
         <br />
         @Html.TextBoxFor(m => m.OrderDate, "{0:yyyy-MM-dd}", new { type = "date" })
+        @Html.ValidationMessageFor(m => m.OrderDate, "", new { @class = "text-danger" })
+        
     </div>
 
     <hr />
@@ -67,8 +72,11 @@
        {
            @class =
         "form-control"
-           ,onkeyup = "validate()"
+           ,
+                onkeyup = "validate()"
        })
+            @Html.ValidationMessageFor(m => m.OrderDetailsFormModel.ItemId, "", new { @class = "text-danger" })
+
         </div>
         <div class="form-group has-success">
 
@@ -76,6 +84,7 @@
             <br />
 
             @Html.TextBoxFor(m => m.OrderDetailsFormModel.Quantity, new { @class = "form-control", @placeholder = "Quantity" })
+            @Html.ValidationMessageFor(m => m.OrderDetailsFormModel.Quantity, "", new { @class = "text-danger" })
 
         </div>
         <div class="form-group has-success">
@@ -84,6 +93,7 @@
             <br />
 
             @Html.TextBoxFor(m => m.OrderDetailsFormModel.Amount, new { @class = "form-control", @placeholder = "Amount", @readonly = "readonly" })
+            @Html.ValidationMessageFor(m => m.OrderDetailsFormModel.Amount, "", new { @class = "text-danger" })
 
         </div>
     </div>
@@ -164,7 +174,7 @@
             type: "POST",
             url: "/Order/PrepareProductData/",
             data: {
-                Itemid: itemid
+                itemid: itemid
             },
 
             cache: !1,
@@ -180,9 +190,7 @@
     </script>
 <script name="text\javascript">
     var OrderDetailsItems = [];
-
     var currentUpdateIndex = null;
-
     function OrderDetails(index, itemName, itemId, qty, amount) {
         this.itemName = itemName;
         this.item = itemId;
@@ -191,7 +199,6 @@
         this.index = index;
         this.total = this.qty * this.amount;
     }
-
     function AddOrderDetail() {
         var res = validation();
         if (res == false) {
@@ -209,8 +216,6 @@
         OrderDetailsItems.push(orderDetail);
         RenderTable();
     }
-
-
     function editOrderDetail(index) {
         $('#@Html.IdFor(m => m.OrderDetailsFormModel.ItemId) :selected').text(OrderDetailsItems[index].itemName);
             currentUpdateIndex = index;

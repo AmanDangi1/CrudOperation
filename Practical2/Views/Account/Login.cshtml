@@ -1,0 +1,32 @@
+﻿@model Practical2.ViewModel.Login
+
+@{
+    ViewBag.Title = "Login";
+}
+
+<script src="//code.jquery.com/jquery-1.10.2.js"></script>
+<script src="~/lib/jquery-validate/jquery.validate.js"></script>
+<script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.js"></script>
+
+<h2>Login</h2>
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+    @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+    <div class="form-group">
+        @Html.LabelFor(o => o.UserName)
+        @Html.TextBoxFor(m => m.UserName, new { @class = "form-control", @placeholder = "UserName" })
+
+        @Html.ValidationMessageFor(model => model.UserName, "", new { @class = "text-danger" })
+
+    </div>
+
+    <div class="form-group">
+        @Html.LabelFor(o => o.Password)
+        @Html.TextBoxFor(m => m.Password, new { @class = "form-control", @placeholder = "Password" })
+        @Html.ValidationMessageFor(model => model.Password, "", new { @class = "text-danger" })
+    </div>
+    <input type="submit" value="Login" class="btn btn-default" />
+
+}

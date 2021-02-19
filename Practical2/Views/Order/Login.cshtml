@@ -1,0 +1,25 @@
+﻿@model Practical2.ViewModel.login
+
+@{
+    ViewBag.Title = "Login";
+}
+
+<h2>Login</h2>
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+
+    <div class="form-group">
+        @Html.LabelFor(o => o.UserName)
+        @Html.TextBoxFor(m => m.UserName, new { @class = "form-control", @placeholder = "UserName" })
+
+    </div>
+    <div class="form-group">
+        @Html.LabelFor(o => o.Password)
+        @Html.TextBoxFor(m => m.Password, new { @class = "form-control", @placeholder = "Password" })
+
+    </div>
+
+            <input type="submit" value="Login" class="btn btn-default" />
+        
+}

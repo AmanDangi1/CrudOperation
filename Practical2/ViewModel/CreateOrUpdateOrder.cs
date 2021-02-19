@@ -27,7 +27,7 @@ namespace Practical2.ViewModel
         public OrderDetailViewModel OrderDetailsFormModel { get; set; }
         public string OrderDetails_update { get; set; }
     }
-
+    
     public class OrderDetailViewModel
     {
         [Required]

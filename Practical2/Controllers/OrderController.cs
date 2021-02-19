@@ -8,12 +8,16 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
+using System.Web.Security;
 
 namespace Practical2.Controllers
 {
+    [Authorize]
     public class OrderController : Controller
     {
         // GET: Order
+
+       
         public ActionResult Index()
         {
             return View();
@@ -23,115 +27,49 @@ namespace Practical2.Controllers
 
             return View();
         }
-        
+
         [HttpGet]
         public ActionResult Manage(int? mid)
         {
             CreateOrUpdateOrder model = new CreateOrUpdateOrder();
-            ManageOrderViewModel(model);
-            string CS = ConfigurationManager.ConnectionStrings["Constring"].ConnectionString;
-            try
-            {
-                #region Get OrderData For edit
+            model.mid = Convert.ToInt32(mid);
 
-
-                using (SqlConnection con = new SqlConnection(CS))
-                {
-                    con.Open();
-                    SqlCommand cmd = new SqlCommand("GetCustomerDetails", con);
-                    cmd.CommandType = CommandType.StoredProcedure;
-
-                    cmd.Parameters.AddWithValue("@Id", mid);
-
-                    using (SqlDataReader rdr = cmd.ExecuteReader())
-                    {
-
-                        while (rdr.Read())
-                        {
-                            model.OrderNo = Convert.ToString(rdr["OrdeNo"]);
-                            model.OrderDate = Convert.ToDateTime(rdr["Date"]);
-                            model.CustomerId = Convert.ToInt32(rdr["Name"]);
-                            model.mid = Convert.ToInt32(rdr["Id"]);
-                        }
-                        con.Close();
-                    }
-
-                    #endregion
-                }
-            }
-            catch (Exception e)
-            {
-
-            }
+            GetAutoOrderNo(model);
+            GetCustomerData(model);
+            GetProductData(model);
+            GetCustomerDataById(model);
+            GetOrderDetailsById(model);
+          
             
-            #region Get Orderdetails Edit Data
-            try
-            {
-                using (SqlConnection con = new SqlConnection(CS))
-                {
-                    con.Open();
-                    SqlCommand cmd = new SqlCommand("GetAllProductDetails", con);
-                    cmd.CommandType = CommandType.StoredProcedure;
-
-                    cmd.Parameters.AddWithValue("@Id", mid);
-
-
-                    using (SqlDataReader rdr = cmd.ExecuteReader())
-                    {
-                        var childTable = rdr;
-                        model.OrderDetails = new List<OrderDetailViewModel>();
-
-                        while (rdr.Read())
-                        {
-                            model.OrderDetails.Add(new OrderDetailViewModel
-                            {
-                                ItemId = Convert.ToInt32(rdr["ItemId"]),
-                                Amount = Convert.ToInt32(rdr["Amount"]),
-                                Quantity = Convert.ToInt32(rdr["Quantity"]),
-                                ItemName = Convert.ToString(rdr["ItemName"]),
-                            });
-                        }
-
-                        con.Close();
-                        con.Close();
-                        if (model.OrderDetails.Count > 0)
-                        {
-                            model.OrderDetails_update = JsonConvert.SerializeObject(model.OrderDetails);
-                        }
-                    }
-
-                }
-            }
-            catch (Exception e)
-            {
-
-
-            }
-            #endregion
-
             return View(model);
         }
 
         [HttpPost]
         public ActionResult Manage(CreateOrUpdateOrder model)
         {
-            if (model.mid == 0)
+            if (ModelState.IsValid)
             {
+                if (model.mid == 0)
+                {
 
-                ManageOrderViewModel(model);
-                insert(model);
-            }
-            else
-            {
-                ManageUpdateData(model);
-                ManageOrderViewModel(model);
-
+                    GetAutoOrderNo(model);
+                    GetCustomerData(model);
+                    GetProductData(model);
+                    InsertCustomerDetails(model);
+                    InsertProductDetails(model);
+                }
+                else
+                {
+                    ManageUpdateData(model);
+                    GetAutoOrderNo(model);
+                    GetCustomerData(model);
+                    GetProductData(model);
+                }
             }
             //return View("OrderList",model);
             return RedirectToRoute("MyRoute");
 
         }
-
         public ActionResult OrderList()
         {
             DataTable dborderdetails = new DataTable();
@@ -145,7 +83,8 @@ namespace Practical2.Controllers
             }
             return View(dborderdetails);
         }
-        public void ManageOrderViewModel(CreateOrUpdateOrder model)
+
+        public void GetAutoOrderNo(CreateOrUpdateOrder model)
         {
             string constr = ConfigurationManager.ConnectionStrings["Constring"].ConnectionString;
 
@@ -179,12 +118,13 @@ namespace Practical2.Controllers
                 }
                 con.Close();
             }
-
+        }
+        public void GetCustomerData(CreateOrUpdateOrder model)
+        {
+            string constr = ConfigurationManager.ConnectionStrings["Constring"].ConnectionString;
 
             model.Customers = new List<DropDownViewModel>();
             {
- 
-
                 using (SqlConnection con = new SqlConnection(constr))
                 {
                     string query = " SELECT Id,CustomerName FROM Customers";
@@ -210,10 +150,13 @@ namespace Practical2.Controllers
 
             }
 
-
+        }
+        public void GetProductData(CreateOrUpdateOrder model)
+        {
             model.OrderDetailsFormModel = new OrderDetailViewModel();
             model.OrderDetailsFormModel.Items = new List<DropDownViewModel>();
             {
+                string constr = ConfigurationManager.ConnectionStrings["Constring"].ConnectionString;
 
                 using (SqlConnection con = new SqlConnection(constr))
                 {
@@ -243,12 +186,9 @@ namespace Practical2.Controllers
             }
         }
 
-        public void insert(CreateOrUpdateOrder model)
+        public void InsertCustomerDetails(CreateOrUpdateOrder model)
         {
-
-
             string constr = ConfigurationManager.ConnectionStrings["Constring"].ConnectionString;
-
             using (SqlConnection con = new SqlConnection(constr))
             {
                 SqlCommand cmd = new SqlCommand("Insert_Order", con);
@@ -263,18 +203,21 @@ namespace Practical2.Controllers
                 con.Close();
             }
 
+           
+        }
+        public void InsertProductDetails(CreateOrUpdateOrder model)
+        {
+            string constr = ConfigurationManager.ConnectionStrings["Constring"].ConnectionString;
+
             using (SqlConnection con = new SqlConnection(constr))
             {
                 SqlCommand cmd = new SqlCommand("Insert_ProductDetails", con);
-
-
                 cmd.CommandType = CommandType.StoredProcedure;
                 con.Open();
                 try
                 {
                     foreach (var item in model.OrderDetails)
                     {
-
                         try
                         {
                             cmd.Parameters.AddWithValue("@ItemId", Convert.ToString(item.ItemId));
@@ -284,14 +227,10 @@ namespace Practical2.Controllers
                             cmd.Parameters.AddWithValue("@Name", Convert.ToString(model.Id));
 
                             cmd.ExecuteNonQuery();
-
                             cmd.Parameters.Clear();
                         }
                         catch (Exception e)
-                        {
-
-                        }
-
+                        { }
                     }
                     con.Close();
                 }
@@ -370,10 +309,9 @@ namespace Practical2.Controllers
 
         }
 
-        public JsonResult PrepareProductData(int Itemid)
+        public JsonResult PrepareProductData(int itemid)
         {
             var Amount = string.Empty;
-
             string constr = ConfigurationManager.ConnectionStrings["Constring"].ConnectionString;
             using (SqlConnection con = new SqlConnection(constr))
             {
@@ -381,8 +319,7 @@ namespace Practical2.Controllers
                 SqlCommand cmd = new SqlCommand("GetProductDetails", con);
                 cmd.CommandType = CommandType.StoredProcedure;
 
-                cmd.Parameters.AddWithValue("@ItemId", Itemid);
-
+                cmd.Parameters.AddWithValue("@ItemId", itemid);
 
                 using (SqlDataReader rdr = cmd.ExecuteReader())
                 {
@@ -398,10 +335,7 @@ namespace Practical2.Controllers
                 }
             }
             return Json(new { Amount });
-
-
         }
-
         #region Delete
         public ActionResult Delete(int id)
         {
@@ -418,5 +352,83 @@ namespace Practical2.Controllers
         }
 
         #endregion
+        
+        public ActionResult GetCustomerDataById(CreateOrUpdateOrder model) 
+        {
+            string CS = ConfigurationManager.ConnectionStrings["Constring"].ConnectionString;
+            try
+            {
+                #region Get OrderData For edit
+                using (SqlConnection con = new SqlConnection(CS))
+                {
+                    con.Open();
+                    SqlCommand cmd = new SqlCommand("GetCustomerDetails", con);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@Id", model.mid);
+                    using (SqlDataReader rdr = cmd.ExecuteReader())
+                    {
+                        while (rdr.Read())
+                        {
+                            model.OrderNo = Convert.ToString(rdr["OrdeNo"]);
+                            model.OrderDate = Convert.ToDateTime(rdr["Date"]);
+                            model.CustomerId = Convert.ToInt32(rdr["Name"]);
+                            model.mid = Convert.ToInt32(rdr["Id"]);
+                        }
+                        con.Close();
+                    }
+
+                    #endregion
+                }
+            }
+            catch (Exception e)
+            {
+
+            }
+            return RedirectToAction("Manage",model);
+
+        }
+
+        public ActionResult GetOrderDetailsById(CreateOrUpdateOrder model)
+        {
+            string CS = ConfigurationManager.ConnectionStrings["Constring"].ConnectionString;
+            #region Get Orderdetails Edit Data
+            try
+            {
+                using (SqlConnection con = new SqlConnection(CS))
+                {
+                    con.Open();
+                    SqlCommand cmd = new SqlCommand("GetAllProductDetails", con);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@Id", model.mid);
+                    using (SqlDataReader rdr = cmd.ExecuteReader())
+                    {
+                        var childTable = rdr;
+                        model.OrderDetails = new List<OrderDetailViewModel>();
+                        while (rdr.Read())
+                        {
+                            model.OrderDetails.Add(new OrderDetailViewModel
+                            {
+                                ItemId = Convert.ToInt32(rdr["ItemId"]),
+                                Amount = Convert.ToInt32(rdr["Amount"]),
+                                Quantity = Convert.ToInt32(rdr["Quantity"]),
+                                ItemName = Convert.ToString(rdr["ItemName"]),
+                            });
+                        }
+                        con.Close();
+                        con.Close();
+                        if (model.OrderDetails.Count > 0)
+                        {
+                            model.OrderDetails_update = JsonConvert.SerializeObject(model.OrderDetails);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+            }
+            #endregion
+            return RedirectToAction("Manage",model);
+           
+        }
     }
 }
